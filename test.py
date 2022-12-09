@@ -29,7 +29,7 @@ for test_idx, test_img in enumerate(test_loader):
     raw_feature, out = model(test_img)
     new_feature = construct_memory_bank_with_nei(raw_feature, 3)
     new_feature = get_new_feature(new_feature, new_bank, raw_feature, raw_bank)
-    out = model.decoder(torch.unsqueeze(new_feature, 0))
+    out = model.decoder(new_feature)
 
     out = np.squeeze(out.detach().numpy())
     out = np.transpose(out, [1, 2, 0])
@@ -44,9 +44,12 @@ for test_idx, test_img in enumerate(test_loader):
 
     plt.subplot(1, 3, 1)
     plt.imshow(cv2.cvtColor(out, cv2.COLOR_RGB2GRAY))
+    plt.title('Decoded image after memory bank')
     plt.subplot(1, 3, 2)
+    plt.title('raw image')
     plt.imshow(cv2.cvtColor(test_img, cv2.COLOR_RGB2GRAY))
     plt.subplot(1, 3, 3)
+    plt.title('residual')
     plt.imshow(cv2.cvtColor(diff, cv2.COLOR_RGB2GRAY))
     #plt.subplot(2, 2, 4)
     #plt.imshow(cv2.cvtColor(test_label, cv2.COLOR_RGB2GRAY))

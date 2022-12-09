@@ -19,6 +19,7 @@ class EarlyStopper:
             self.counter = 0
             self.best_model = model
             torch.save(self.best_model.state_dict(), 'best_model.pt')
+            print('model saved....')
         elif validation_loss > (self.min_validation_loss + self.min_delta):
             self.counter += 1
             if self.counter >= self.patience:
@@ -72,7 +73,6 @@ def get_new_feature(nei_feature, nei_memory_bank, raw_feature, raw_bank):
     shape = nei_memory_bank.size()
     cos = nn.CosineSimilarity()
 
-    nei = [5, 5]
     avg_feature = torch.zeros((128, 32, 32))
     for i in range(shape[2]):
         for j in range(shape[3]):

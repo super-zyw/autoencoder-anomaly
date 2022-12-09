@@ -41,7 +41,6 @@ class listDataset(Dataset):
             # create line image
             img1 = ImageDraw.Draw(img)
             img1.line(shape, fill="black", width=10)
-            img.show()
             img = self.transform(img)
             #labelpath = imgpath.replace('test', 'ground_truth')
             #label = Image.open(labelpath).convert('RGB')

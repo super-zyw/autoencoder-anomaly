@@ -7,6 +7,7 @@ from model import ae
 from utils import EarlyStopper
 import dataset
 import numpy as np
+import ssim
 from torch.utils.tensorboard import SummaryWriter
 import matplotlib.pyplot as plt
 
@@ -31,18 +32,19 @@ def train(train_list, val_list, test_list, batch_size, learning_rate, total_epoc
                                                                       [transforms.Resize((128, 128)),
                                                                        transforms.ToTensor(),]),
                                                                  cell_size=32), batch_size = 1, **kwargs)
-    writer = SummaryWriter()
+    #writer = SummaryWriter()
     model = ae()
     model.train()
     # if torch.cuda.device_count() > 1:
     # print("Let's use", torch.cuda.device_count(), "GPUs!")
     # model = torch.nn.DataParallel(model)
 
-    criterion = torch.nn.MSELoss()
-    optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=0.99)
-    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[10, 20, 30, 40], gamma=0.1)
+    #criterion = torch.nn.MSELoss()
+    criterion = ssim.SSIM()
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[5, 10, 20, 30, 40], gamma=0.1)
 
-    early_stopping = EarlyStopper(patience = 2, min_delta=0.001)
+    early_stopping = EarlyStopper(patience = 3, min_delta=0.001)
     k = 0
     for epoch in range(total_epochs):
         avg_loss = 0
@@ -53,15 +55,15 @@ def train(train_list, val_list, test_list, batch_size, learning_rate, total_epoc
 
             _, train_out = model(train_img)
 
-            train_loss = criterion(train_img, train_out)
-            avg_loss += train_loss
+            ssim_loss = 1-criterion(train_img, train_out)
+            avg_loss += ssim_loss
 
-            print('epoch:{}, batch: {}, lr: {}, loss: {}'.format(epoch, train_idx, scheduler.get_lr(), train_loss))
-            train_loss.backward()
+            print('epoch:{}, batch: {}, lr: {}, loss: {}'.format(epoch, train_idx, scheduler.get_lr(), ssim_loss))
+            ssim_loss.backward()
             optimizer.step()
         scheduler.step()
-        writer.add_scalar("Loss/train", avg_loss / train_idx, epoch)
-        if epoch % 2 == 0:
+        #writer.add_scalar("Loss/train", avg_loss / train_idx, epoch)
+        if epoch % 5 == 0:
             print('start validating...')
             with torch.no_grad():
                 valid_loss = 0
@@ -70,14 +72,15 @@ def train(train_list, val_list, test_list, batch_size, learning_rate, total_epoc
                         val_img = val_img.cuda()
                     _, val_out = model(val_img)
                     valid_loss += criterion(val_img, val_out)
-                    writer.add_scalar("Loss/val", valid_loss / val_idx, k)
+                    #writer.add_scalar("Loss/val", valid_loss / val_idx, k)
+                print('counter: {}'.format(early_stopping.counter))
                 is_early_stopping = early_stopping.early_stop(model, valid_loss)
                 k += 1
 
         if is_early_stopping:
             break
 
-    writer.flush()
+    #writer.flush()
 
     model.eval()
 
@@ -98,7 +101,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--total_epochs', type=int, default = 50)
     parser.add_argument('--num_workers', type=int, default=4)
-    parser.add_argument('--learning_rate', type=float, default=0.01)
+    parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--use_cuda', type=bool, default=False)
 
     args = parser.parse_args()
